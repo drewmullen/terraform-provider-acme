@@ -16,8 +16,10 @@ import (
 )
 
 var dnsChallengeAttrTypes = map[string]attr.Type{
-	"provider": types.StringType,
-	"config":   types.MapType{ElemType: types.StringType},
+	"provider":         types.StringType,
+	"config":           types.MapType{ElemType: types.StringType},
+	"config_wo":        types.MapType{ElemType: types.StringType},
+	"config_wo_version": types.StringType,
 }
 
 var httpChallengeAttrTypes = map[string]attr.Type{
@@ -267,6 +269,15 @@ func (r *certificateResource) Schema(_ context.Context, _ resource.SchemaRequest
 							Optional:    true,
 							Sensitive:   true,
 							ElementType: types.StringType,
+						},
+						"config_wo": schema.MapAttribute{
+							Optional:    true,
+							WriteOnly:   true,
+							Sensitive:   true,
+							ElementType: types.StringType,
+						},
+						"config_wo_version": schema.StringAttribute{
+							Optional: true,
 						},
 					},
 				},

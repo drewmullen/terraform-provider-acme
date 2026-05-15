@@ -51,8 +51,10 @@ type certificateResourceModel struct {
 }
 
 type dnsChallengeModel struct {
-	Provider types.String `tfsdk:"provider"`
-	Config   types.Map    `tfsdk:"config"`
+	Provider        types.String `tfsdk:"provider"`
+	Config          types.Map    `tfsdk:"config"`
+	ConfigWO        types.Map    `tfsdk:"config_wo"`
+	ConfigWOVersion types.String `tfsdk:"config_wo_version"`
 }
 
 type httpChallengeModel struct {

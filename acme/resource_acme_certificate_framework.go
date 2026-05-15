@@ -25,6 +25,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/tfsdk"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 	"github.com/vancluever/terraform-provider-acme/v2/acme/dnsplugin"
 )
@@ -121,10 +122,11 @@ func (r *certificateResource) ModifyPlan(ctx context.Context, req resource.Modif
 
 	validityChanged := !state.ValidityDays.Equal(plan.ValidityDays)
 	useRenewalInfoChanged := !state.UseRenewalInfo.Equal(plan.UseRenewalInfo)
+	configWOVersionChanged := fwDNSConfigWOVersionChanged(ctx, state.DNSChallenge, plan.DNSChallenge)
 
 	// Mark ARI fields unknown when use_renewal_info changes (stale state data)
 	// or when renewal is happening (all cert outputs will be replaced).
-	if shouldRenew || validityChanged || useRenewalInfoChanged {
+	if shouldRenew || validityChanged || useRenewalInfoChanged || configWOVersionChanged {
 		unknownStr := types.StringUnknown()
 		for _, attr := range []string{
 			"renewal_info_window_start", "renewal_info_window_end",
@@ -134,7 +136,7 @@ func (r *certificateResource) ModifyPlan(ctx context.Context, req resource.Modif
 		}
 	}
 
-	if !shouldRenew && !validityChanged {
+	if !shouldRenew && !validityChanged && !configWOVersionChanged {
 		return
 	}
 
@@ -162,6 +164,29 @@ func (r *certificateResource) ValidateConfig(ctx context.Context, req resource.V
 			"Missing required field",
 			"\"subject_alternative_names\": one of\n`certificate_request_pem,common_name,subject_alternative_names` must be\nspecified",
 		)
+	}
+
+	// dns_challenge: config and config_wo are mutually exclusive; config_wo requires config_wo_version.
+	var dnsChallenges []dnsChallengeModel
+	if !data.DNSChallenge.IsNull() && !data.DNSChallenge.IsUnknown() {
+		resp.Diagnostics.Append(data.DNSChallenge.ElementsAs(ctx, &dnsChallenges, false)...)
+	}
+	for i, c := range dnsChallenges {
+		p := path.Root("dns_challenge").AtListIndex(i)
+		if !c.Config.IsNull() && !c.Config.IsUnknown() && !c.ConfigWO.IsNull() && !c.ConfigWO.IsUnknown() {
+			resp.Diagnostics.AddAttributeError(
+				p.AtName("config"),
+				"Conflicting attributes",
+				"Only one of config or config_wo may be specified, not both.",
+			)
+		}
+		if !c.ConfigWO.IsNull() && !c.ConfigWO.IsUnknown() && c.ConfigWOVersion.IsNull() {
+			resp.Diagnostics.AddAttributeError(
+				p.AtName("config_wo_version"),
+				"Required with config_wo",
+				"config_wo_version must be set when config_wo is used.",
+			)
+		}
 	}
 
 	// validity_days must not fall within min_days_remaining (would trigger renewal on every apply)
@@ -192,6 +217,11 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
+	writeOnlyDNS := fwExtractWriteOnlyDNS(ctx, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	resourceUUID, err := uuid.GenerateUUID()
 	if err != nil {
 		resp.Diagnostics.AddError("UUID generation failed", err.Error())
@@ -204,7 +234,7 @@ func (r *certificateResource) Create(ctx context.Context, req resource.CreateReq
 		return
 	}
 
-	dnsCloser, diags := r.fwSetChallengeProviders(ctx, client, &data)
+	dnsCloser, diags := r.fwSetChallengeProviders(ctx, client, &data, writeOnlyDNS)
 	defer dnsCloser()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -283,7 +313,8 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 	}
 
 	validityChanged := !state.ValidityDays.Equal(plan.ValidityDays)
-	if !shouldRenew && !validityChanged {
+	configWOVersionChanged := fwDNSConfigWOVersionChanged(ctx, state.DNSChallenge, plan.DNSChallenge)
+	if !shouldRenew && !validityChanged && !configWOVersionChanged {
 		if !state.CertificateP12Password.Equal(plan.CertificateP12Password) {
 			cert := r.fwExpandCertificateResource(&state)
 			plan.ID = state.ID
@@ -337,7 +368,12 @@ func (r *certificateResource) Update(ctx context.Context, req resource.UpdateReq
 
 	cert := r.fwExpandCertificateResource(&state)
 
-	dnsCloser, diags := r.fwSetChallengeProviders(ctx, client, &plan)
+	writeOnlyDNS := fwExtractWriteOnlyDNS(ctx, req.Config, &resp.Diagnostics)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	dnsCloser, diags := r.fwSetChallengeProviders(ctx, client, &plan, writeOnlyDNS)
 	defer dnsCloser()
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -463,7 +499,7 @@ func (r *certificateResource) fwExpandACMEClient(_ context.Context, data *certif
 	return client, diags
 }
 
-func (r *certificateResource) fwSetChallengeProviders(ctx context.Context, client *lego.Client, data *certificateResourceModel) (func(), diag.Diagnostics) {
+func (r *certificateResource) fwSetChallengeProviders(ctx context.Context, client *lego.Client, data *certificateResourceModel, writeOnlyDNS []dnsChallengeModel) (func(), diag.Diagnostics) {
 	var diags diag.Diagnostics
 	noop := func() {}
 
@@ -481,12 +517,22 @@ func (r *certificateResource) fwSetChallengeProviders(ctx context.Context, clien
 		var isSequential bool
 		var sequentialInterval time.Duration
 
-		for _, c := range challenges {
+		for i, c := range challenges {
 			cfg := map[string]string{}
 			if !c.Config.IsNull() {
 				diags.Append(c.Config.ElementsAs(ctx, &cfg, false)...)
 				if diags.HasError() {
 					return noop, diags
+				}
+			}
+			if i < len(writeOnlyDNS) && !writeOnlyDNS[i].ConfigWO.IsNull() && !writeOnlyDNS[i].ConfigWO.IsUnknown() {
+				extra := map[string]string{}
+				diags.Append(writeOnlyDNS[i].ConfigWO.ElementsAs(ctx, &extra, false)...)
+				if diags.HasError() {
+					return noop, diags
+				}
+				for k, v := range extra {
+					cfg[k] = v
 				}
 			}
 			result, err := dnsplugin.NewClient(c.Provider.ValueString(), cfg, nameservers)
@@ -901,6 +947,44 @@ func fwListStrings(ctx context.Context, l types.List) []string {
 	var out []string
 	_ = l.ElementsAs(ctx, &out, false)
 	return out
+}
+
+// fwDNSConfigWOVersionChanged returns true if any dns_challenge block has a
+// different config_wo_version in the plan than in the state. A version change
+// signals that the caller has rotated write-only credentials and wants a renewal.
+func fwDNSConfigWOVersionChanged(ctx context.Context, stateList, planList types.List) bool {
+	if stateList.IsNull() || stateList.IsUnknown() || planList.IsNull() || planList.IsUnknown() {
+		return false
+	}
+	var stateChallenges, planChallenges []dnsChallengeModel
+	_ = stateList.ElementsAs(ctx, &stateChallenges, false)
+	_ = planList.ElementsAs(ctx, &planChallenges, false)
+	for i, pc := range planChallenges {
+		if i >= len(stateChallenges) {
+			break
+		}
+		if !pc.ConfigWOVersion.Equal(stateChallenges[i].ConfigWOVersion) {
+			return true
+		}
+	}
+	return false
+}
+
+// fwExtractWriteOnlyDNS reads dns_challenge blocks from req.Config so that
+// write-only config_wo values (never stored in state) are available during
+// Create and Update.
+func fwExtractWriteOnlyDNS(ctx context.Context, cfg tfsdk.Config, diags *diag.Diagnostics) []dnsChallengeModel {
+	var configData certificateResourceModel
+	diags.Append(cfg.Get(ctx, &configData)...)
+	if diags.HasError() {
+		return nil
+	}
+	if configData.DNSChallenge.IsNull() || configData.DNSChallenge.IsUnknown() {
+		return nil
+	}
+	var challenges []dnsChallengeModel
+	diags.Append(configData.DNSChallenge.ElementsAs(ctx, &challenges, false)...)
+	return challenges
 }
 
 // suppress unused import

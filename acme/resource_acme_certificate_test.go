@@ -842,6 +842,77 @@ func TestAccACMECertificate_validityDays_validation(t *testing.T) {
 	})
 }
 
+func TestAccACMECertificate_dnsConfigWO(t *testing.T) {
+	wantEnv := os.Environ()
+	var certSerial string
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProviders,
+		ExternalProviders:        testAccExternalProviders,
+		CheckDestroy:             testAccCheckACMECertificateStatus("acme_certificate.certificate", certificateStatusRevoked),
+		Steps: []resource.TestStep{
+			{
+				// Basic: config_wo works the same as config for obtaining a cert.
+				Config: testAccACMECertificateConfigWO("v1"),
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestMatchResourceAttr("acme_certificate.certificate", "id", uuidRegexp),
+					resource.TestMatchResourceAttr("acme_certificate.certificate", "certificate_url", certURLRegexp),
+					testAccCheckACMECertificateValid("acme_certificate.certificate", "www-wo", ""),
+					// config_wo is never stored in state.
+					resource.TestCheckNoResourceAttr("acme_certificate.certificate", "dns_challenge.0.config_wo"),
+					// config_wo_version is stored.
+					resource.TestCheckResourceAttr("acme_certificate.certificate", "dns_challenge.0.config_wo_version", "v1"),
+					testAccCheckACMECertificateSaveSerial(&certSerial),
+					testAccCheckACMECertificateIntermediateEqual("acme_certificate.certificate", getPebbleCertificate(mainIntermediateURL)),
+					testAccCheckEnvironNotChanged(wantEnv),
+				),
+			},
+			{
+				// Same version: no renewal — serial must stay the same.
+				Config: testAccACMECertificateConfigWO("v1"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckACMECertificateCheckSerialEqual(&certSerial, true),
+					testAccCheckEnvironNotChanged(wantEnv),
+				),
+			},
+			{
+				// New version: triggers renewal — serial must change.
+				Config: testAccACMECertificateConfigWO("v2"),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckACMECertificateCheckSerialEqual(&certSerial, false),
+					resource.TestCheckResourceAttr("acme_certificate.certificate", "dns_challenge.0.config_wo_version", "v2"),
+					testAccCheckEnvironNotChanged(wantEnv),
+				),
+			},
+		},
+	})
+}
+
+func TestAccACMECertificate_dnsConfigWO_bothConfigError(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProviders,
+		ExternalProviders:        testAccExternalProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccACMECertificateConfigWOBothConfig(),
+				ExpectError: regexp.MustCompile(`Only one of config or config_wo may be specified`),
+			},
+		},
+	})
+}
+
+func TestAccACMECertificate_dnsConfigWO_missingVersionError(t *testing.T) {
+	resource.Test(t, resource.TestCase{
+		ProtoV5ProviderFactories: testAccProviders,
+		ExternalProviders:        testAccExternalProviders,
+		Steps: []resource.TestStep{
+			{
+				Config:      testAccACMECertificateConfigWOMissingVersion(),
+				ExpectError: regexp.MustCompile(`config_wo_version must be set when config_wo is used`),
+			},
+		},
+	})
+}
+
 type testAccCheckACMECertificateStandardOpts struct {
 	CommonName             string
 	SubjectAlternativeName string
@@ -2398,6 +2469,138 @@ resource "acme_certificate" "certificate" {
 		enabled,
 		maxSleep,
 		ignoreRetry,
+		pebbleChallTestDNSSrv,
+		pebbleChallTestDNSScriptPath,
+	)
+}
+
+func testAccACMECertificateConfigWO(version string) string {
+	return fmt.Sprintf(`
+provider "acme" {
+  server_url = "%s"
+}
+
+variable "email_address" {
+  default = "nobody@%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "acme_registration" "reg" {
+  email_address = var.email_address
+}
+
+resource "acme_certificate" "certificate" {
+  account_key_pem = acme_registration.reg.account_key_pem
+  common_name     = "www-wo.${var.domain}"
+
+  recursive_nameservers        = ["%s"]
+  disable_complete_propagation = true
+
+  dns_challenge {
+    provider = "exec"
+    config_wo = {
+      EXEC_PATH              = "%s"
+      EXEC_SEQUENCE_INTERVAL = "5"
+    }
+    config_wo_version = "%s"
+  }
+}
+`,
+		pebbleDirBasic,
+		pebbleCertDomain,
+		pebbleCertDomain,
+		pebbleChallTestDNSSrv,
+		pebbleChallTestDNSScriptPath,
+		version,
+	)
+}
+
+func testAccACMECertificateConfigWOBothConfig() string {
+	return fmt.Sprintf(`
+provider "acme" {
+  server_url = "%s"
+}
+
+variable "email_address" {
+  default = "nobody@%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "acme_registration" "reg" {
+  email_address = var.email_address
+}
+
+resource "acme_certificate" "certificate" {
+  account_key_pem = acme_registration.reg.account_key_pem
+  common_name     = "www-wo.${var.domain}"
+
+  recursive_nameservers        = ["%s"]
+  disable_complete_propagation = true
+
+  dns_challenge {
+    provider = "exec"
+    config = {
+      EXEC_PATH = "%s"
+    }
+    config_wo = {
+      EXEC_PATH = "%s"
+    }
+    config_wo_version = "v1"
+  }
+}
+`,
+		pebbleDirBasic,
+		pebbleCertDomain,
+		pebbleCertDomain,
+		pebbleChallTestDNSSrv,
+		pebbleChallTestDNSScriptPath,
+		pebbleChallTestDNSScriptPath,
+	)
+}
+
+func testAccACMECertificateConfigWOMissingVersion() string {
+	return fmt.Sprintf(`
+provider "acme" {
+  server_url = "%s"
+}
+
+variable "email_address" {
+  default = "nobody@%s"
+}
+
+variable "domain" {
+  default = "%s"
+}
+
+resource "acme_registration" "reg" {
+  email_address = var.email_address
+}
+
+resource "acme_certificate" "certificate" {
+  account_key_pem = acme_registration.reg.account_key_pem
+  common_name     = "www-wo.${var.domain}"
+
+  recursive_nameservers        = ["%s"]
+  disable_complete_propagation = true
+
+  dns_challenge {
+    provider = "exec"
+    config_wo = {
+      EXEC_PATH              = "%s"
+      EXEC_SEQUENCE_INTERVAL = "5"
+    }
+  }
+}
+`,
+		pebbleDirBasic,
+		pebbleCertDomain,
+		pebbleCertDomain,
 		pebbleChallTestDNSSrv,
 		pebbleChallTestDNSScriptPath,
 	)
