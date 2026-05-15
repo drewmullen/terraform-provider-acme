@@ -9,7 +9,7 @@ import (
 
 func TestAccACMEServerURL_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{

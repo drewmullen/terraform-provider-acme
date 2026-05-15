@@ -2,6 +2,7 @@ package acme
 
 import (
 	"bytes"
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -14,24 +15,31 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/terraform-plugin-framework/providerserver"
+	"github.com/hashicorp/terraform-plugin-go/tfprotov5"
+	"github.com/hashicorp/terraform-plugin-mux/tf5muxserver"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
-	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/vancluever/terraform-provider-acme/v2/acme/dnsplugin"
 )
 
-func testAccProviderAcme() *schema.Provider {
-	return Provider()
-}
-
 func testAccProviderAcmeConfig(serverUrl string) *Config {
-	return &Config{
-		ServerURL: serverUrl,
-	}
+	return &Config{ServerURL: serverUrl}
 }
 
-var testAccProviders = map[string]func() (*schema.Provider, error){
-	"acme": func() (*schema.Provider, error) {
-		return testAccProviderAcme(), nil
+// testAccProviders is used as ProtoV5ProviderFactories in all acceptance tests.
+// It spins up the same mux server as main.go so both acme_registration (SDK v2)
+// and acme_certificate (Framework) are available in every test.
+var testAccProviders = map[string]func() (tfprotov5.ProviderServer, error){
+	"acme": func() (tfprotov5.ProviderServer, error) {
+		ctx := context.Background()
+		mux, err := tf5muxserver.NewMuxServer(ctx,
+			providerserver.NewProtocol5(NewFrameworkProvider()),
+			Provider().GRPCProvider,
+		)
+		if err != nil {
+			return nil, err
+		}
+		return mux.ProviderServer(), nil
 	},
 }
 

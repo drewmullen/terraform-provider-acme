@@ -13,7 +13,7 @@ import (
 
 func TestAccACMERegistration_basic(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirBasic),
 		Steps: []resource.TestStep{
@@ -33,7 +33,7 @@ func TestAccACMERegistration_basic(t *testing.T) {
 
 func TestAccACMERegistration_noEmail(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirBasic),
 		Steps: []resource.TestStep{
@@ -53,7 +53,7 @@ func TestAccACMERegistration_noEmail(t *testing.T) {
 
 func TestAccACMERegistration_eab(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirEAB),
 		Steps: []resource.TestStep{
@@ -75,7 +75,7 @@ func TestAccACMERegistration_eab_changeID(t *testing.T) {
 	var oldState *terraform.State
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirEAB),
 		Steps: []resource.TestStep{
@@ -127,7 +127,7 @@ func TestAccACMERegistration_eab_changeID(t *testing.T) {
 
 func TestAccACMERegistration_externalKey(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirBasic),
 		Steps: []resource.TestStep{
@@ -151,7 +151,7 @@ func TestAccACMERegistration_externalKey(t *testing.T) {
 
 func TestAccACMERegistration_externalKeyConflict(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories:         testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders:         testAccExternalProviders,
 		CheckDestroy:              testAccCheckACMERegistrationValid("acme_registration.reg", false, pebbleDirBasic),
 		PreventPostDestroyRefresh: true,
@@ -167,7 +167,7 @@ func TestAccACMERegistration_externalKeyConflict(t *testing.T) {
 func TestAccACMERegistration_refreshDeactivated(t *testing.T) {
 	var state *terraform.State
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{

@@ -36,7 +36,7 @@ var certURLRegexp = regexp.MustCompile(`^https://localhost:1400[012]/certZ/[a-z0
 func TestAccACMECertificate_basic(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMECertificateStatus("acme_certificate.certificate", certificateStatusRevoked),
 		Steps: []resource.TestStep{
@@ -58,7 +58,7 @@ func TestAccACMECertificate_basic(t *testing.T) {
 func TestAccACMECertificate_basic_revoke_reason(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMECertificateStatus("acme_certificate.certificate", certificateStatusRevoked),
 		Steps: []resource.TestStep{
@@ -80,7 +80,7 @@ func TestAccACMECertificate_basic_revoke_reason(t *testing.T) {
 func TestAccACMECertificate_noCommonName(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMECertificateStatus("acme_certificate.certificate", certificateStatusRevoked),
 		Steps: []resource.TestStep{
@@ -103,7 +103,7 @@ func TestAccACMECertificate_noCommonName(t *testing.T) {
 func TestAccACMECertificate_withProfile(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -123,7 +123,7 @@ func TestAccACMECertificate_withProfile(t *testing.T) {
 func TestAccACMECertificate_CSR(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -143,7 +143,7 @@ func TestAccACMECertificate_CSR(t *testing.T) {
 func TestAccACMECertificate_CSR_PreferredChain(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -163,7 +163,7 @@ func TestAccACMECertificate_CSR_PreferredChain(t *testing.T) {
 func TestAccACMECertificate_CSR_Profile(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -184,7 +184,7 @@ func TestAccACMECertificate_forceRenewal(t *testing.T) {
 	wantEnv := os.Environ()
 	var certURL string
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -227,7 +227,7 @@ func TestAccACMECertificate_forceRenewal(t *testing.T) {
 func TestAccACMECertificate_wildcard(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -247,7 +247,7 @@ func TestAccACMECertificate_wildcard(t *testing.T) {
 func TestAccACMECertificate_p12Password(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -280,7 +280,7 @@ func TestAccACMECertificate_preCheckDelay(t *testing.T) {
 	const delay = 15
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -348,7 +348,7 @@ func TestAccACMECertificate_propagationWait(t *testing.T) {
 	const delay = 15
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -408,7 +408,7 @@ func TestAccACMECertificate_propagationWait(t *testing.T) {
 func TestAccACMECertificate_duplicateDomain(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -428,7 +428,7 @@ func TestAccACMECertificate_duplicateDomain(t *testing.T) {
 func TestAccACMECertificate_preferredChain(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -448,7 +448,7 @@ func TestAccACMECertificate_preferredChain(t *testing.T) {
 func TestAccACMECertificate_http(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -474,7 +474,7 @@ func TestAccACMECertificate_httpWebroot(t *testing.T) {
 	defer closeServer()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -502,7 +502,7 @@ func TestAccACMECertificate_httpMemcache(t *testing.T) {
 	defer closeServer()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -540,7 +540,7 @@ func TestAccACMECertificate_httpS3(t *testing.T) {
 	defer closeServer()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -567,7 +567,7 @@ func TestAccACMECertificate_renewalInfo_basic(t *testing.T) {
 		ExpectedEnv:            wantEnv,
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -593,7 +593,7 @@ func TestAccACMECertificate_renewalInfo_renew(t *testing.T) {
 		ExpectedEnv:            wantEnv,
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -644,7 +644,7 @@ func TestAccACMECertificate_minDaysDynamic_basic(t *testing.T) {
 		ExpectedEnv:            wantEnv,
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -667,7 +667,7 @@ func TestAccACMECertificate_minDaysDynamic_short(t *testing.T) {
 		ExpectedEnv:            wantEnv,
 	}
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -710,7 +710,7 @@ func TestAccACMECertificate_httpProxy(t *testing.T) {
 	defer closeServer()
 
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -730,7 +730,7 @@ func TestAccACMECertificate_httpProxy(t *testing.T) {
 func TestAccACMECertificate_tls(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -750,7 +750,7 @@ func TestAccACMECertificate_tls(t *testing.T) {
 func TestAccACMECertificate_noRevoke(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		CheckDestroy:      testAccCheckACMECertificateStatus("acme_certificate.certificate", certificateStatusValid),
 		Steps: []resource.TestStep{
@@ -771,7 +771,7 @@ func TestAccACMECertificate_noRevoke(t *testing.T) {
 
 func TestAccACMECertificate_noDomains(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -785,7 +785,7 @@ func TestAccACMECertificate_noDomains(t *testing.T) {
 func TestAccACMECertificate_validityDays(t *testing.T) {
 	wantEnv := os.Environ()
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -807,7 +807,7 @@ func TestAccACMECertificate_validityDays_renewalOnChange(t *testing.T) {
 	wantEnv := os.Environ()
 	var certSerial string
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -831,7 +831,7 @@ func TestAccACMECertificate_validityDays_renewalOnChange(t *testing.T) {
 
 func TestAccACMECertificate_validityDays_validation(t *testing.T) {
 	resource.Test(t, resource.TestCase{
-		ProviderFactories: testAccProviders,
+		ProtoV5ProviderFactories: testAccProviders,
 		ExternalProviders: testAccExternalProviders,
 		Steps: []resource.TestStep{
 			{
@@ -987,7 +987,7 @@ func testAccCheckACMECertificateValid(n, cn, san string) resource.TestCheckFunc 
 		}
 
 		// Expiry based on profile
-		if _, ok := rs.Primary.Attributes["profile"]; ok {
+		if profile := rs.Primary.Attributes["profile"]; profile != "" {
 			// We only have one test profile in pebble right now with a validity
 			// period of 160 hours, so we just round the NotAfter date and the current
 			// date down to the current day and test against that.

@@ -18,7 +18,7 @@ func Provider() *schema.Provider {
 
 		ResourcesMap: map[string]*schema.Resource{
 			"acme_registration": resourceACMERegistration(),
-			"acme_certificate":  resourceACMECertificate(),
+			// acme_certificate is served by the Framework provider (see provider_framework.go)
 		},
 
 		DataSourcesMap: map[string]*schema.Resource{
