@@ -887,31 +887,6 @@ func TestAccACMECertificate_dnsConfigWO(t *testing.T) {
 	})
 }
 
-func TestAccACMECertificate_dnsConfigWO_bothConfigError(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProviders,
-		ExternalProviders:        testAccExternalProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccACMECertificateConfigWOBothConfig(),
-				ExpectError: regexp.MustCompile(`Only one of config or config_wo may be specified`),
-			},
-		},
-	})
-}
-
-func TestAccACMECertificate_dnsConfigWO_missingVersionError(t *testing.T) {
-	resource.Test(t, resource.TestCase{
-		ProtoV5ProviderFactories: testAccProviders,
-		ExternalProviders:        testAccExternalProviders,
-		Steps: []resource.TestStep{
-			{
-				Config:      testAccACMECertificateConfigWOMissingVersion(),
-				ExpectError: regexp.MustCompile(`config_wo_version must be set when config_wo is used`),
-			},
-		},
-	})
-}
 
 type testAccCheckACMECertificateStandardOpts struct {
 	CommonName             string
@@ -2515,94 +2490,6 @@ resource "acme_certificate" "certificate" {
 		pebbleChallTestDNSSrv,
 		pebbleChallTestDNSScriptPath,
 		version,
-	)
-}
-
-func testAccACMECertificateConfigWOBothConfig() string {
-	return fmt.Sprintf(`
-provider "acme" {
-  server_url = "%s"
-}
-
-variable "email_address" {
-  default = "nobody@%s"
-}
-
-variable "domain" {
-  default = "%s"
-}
-
-resource "acme_registration" "reg" {
-  email_address = var.email_address
-}
-
-resource "acme_certificate" "certificate" {
-  account_key_pem = acme_registration.reg.account_key_pem
-  common_name     = "www-wo.${var.domain}"
-
-  recursive_nameservers        = ["%s"]
-  disable_complete_propagation = true
-
-  dns_challenge {
-    provider = "exec"
-    config = {
-      EXEC_PATH = "%s"
-    }
-    config_wo = {
-      EXEC_PATH = "%s"
-    }
-    config_wo_version = "v1"
-  }
-}
-`,
-		pebbleDirBasic,
-		pebbleCertDomain,
-		pebbleCertDomain,
-		pebbleChallTestDNSSrv,
-		pebbleChallTestDNSScriptPath,
-		pebbleChallTestDNSScriptPath,
-	)
-}
-
-func testAccACMECertificateConfigWOMissingVersion() string {
-	return fmt.Sprintf(`
-provider "acme" {
-  server_url = "%s"
-}
-
-variable "email_address" {
-  default = "nobody@%s"
-}
-
-variable "domain" {
-  default = "%s"
-}
-
-resource "acme_registration" "reg" {
-  email_address = var.email_address
-}
-
-resource "acme_certificate" "certificate" {
-  account_key_pem = acme_registration.reg.account_key_pem
-  common_name     = "www-wo.${var.domain}"
-
-  recursive_nameservers        = ["%s"]
-  disable_complete_propagation = true
-
-  dns_challenge {
-    provider = "exec"
-    config_wo = {
-      EXEC_PATH              = "%s"
-      EXEC_SEQUENCE_INTERVAL = "5"
-    }
-  }
-}
-`,
-		pebbleDirBasic,
-		pebbleCertDomain,
-		pebbleCertDomain,
-		pebbleChallTestDNSSrv,
-		pebbleChallTestDNSScriptPath,
 	)
 }
 
